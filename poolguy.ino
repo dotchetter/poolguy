@@ -12,6 +12,7 @@
 #include <StateMachine.h>
 #include <ArduinoIoTCloud.h>
 #include <Arduino_ConnectionHandler.h>
+#include <ArduinoLowPower.h>
 
 /* Constants */
 const char THING_ID[] = DEVICE_ID;
@@ -38,7 +39,6 @@ void tempChanged()
 void setup()
 {
     Serial.begin(112500);
-
     ArduinoCloud.setThingId(THING_ID);
     ArduinoCloud.addProperty(temp, READWRITE, 60 * SECONDS, tempChanged);
     ArduinoCloud.begin(ArduinoIoTPreferredConnection);
@@ -51,11 +51,9 @@ void setup()
 uint32_t last_iter;
 void loop() 
 {
-    if (millis() - last_iter > STDBY_TIME_MS)
-    {
-        temp = tempSensor->GetTemperature('C');
-        Serial.println(temp);
-        last_iter = millis();
-        ArduinoCloud.update();
-    }
+    temp = tempSensor->GetTemperature('C');
+    Serial.println(temp);
+    last_iter = millis();
+    ArduinoCloud.update();
+    LowPower.sleep(STDBY_TIME_MS);
 }
