@@ -3,8 +3,7 @@
 
     Hardware configuration:
         MCU:                    Arduino MKR 1010 WiFi (SAMD21)
-        PH SENSOR:              GROVE E201C-BLUE    (Connected to D8)
-        TEMP SENSOR:            DSB18B20 ONEWIRE    (Connected to A1)
+        TEMP SENSOR:            DSB18B20 ONEWIRE    (Connected to D8)
 */
 
 #include "defines.h"
