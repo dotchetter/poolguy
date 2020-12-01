@@ -36,44 +36,50 @@ enum class State
 float temp;
 
 /* Heap allocated globally accessible instances (Singletons) */
-DS18B20 *tempSensor = new DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 DS18B20 *tempSensor = new DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 StateMachine<State> *stateMachine = new StateMachine<State>(State::IDLE, idle);
 
 
-void tempChanged()
-{
-    Serial.print("Temperature: ");
-    Serial.print(temp);
-    Serial.println(" C");
-}
+void setup()
+{   
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, 1);
 
     /* Configure StateMachine instance with states and chains */
     stateMachine->addState(State::TRANSMIT_TELEMETRY, transmit_telemetry);
     stateMachine->addState(State::WIFI_ERROR, wifi_error);
 
-void setup()
-{
-    Serial.begin(112500);
+    /* Configure integration with Arduino IoT Cloud */
     ArduinoCloud.setThingId(THING_ID);
-    ArduinoCloud.addProperty(temp, READWRITE, 60 * SECONDS, tempChanged);
+    ArduinoCloud.addProperty(temp, READWRITE, 60 * SECONDS);
     ArduinoCloud.begin(ArduinoIoTPreferredConnection);
+    
+    /* Set the WiFi module in low power mode */
+    WiFi.lowPowerMode();
+}
 
-    setDebugMessageLevel(2);
-    ArduinoCloud.printDebugInfo();
+
+void idle()
+{
+    static uint64_t last_sleep;
+    if (millis() - last_sleep > RUNTIME_MS)
+    {
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(1000);
+        last_sleep = millis();
+        LowPower.sleep(SLEEP_MS);
+        delay(1000);
+        NVIC_SystemReset();
+    }
     stateMachine->transitionTo(State::TRANSMIT_TELEMETRY);
 }
 
 
-uint32_t last_iter;
-void loop() 
+void transmit_telemetry()
 {
     temp = tempSensor->GetTemperature('C');
-    Serial.println(temp);
-    last_iter = millis();
     ArduinoCloud.update();
-    LowPower.sleep(STDBY_TIME_MS);
     stateMachine->release();
 }
 
