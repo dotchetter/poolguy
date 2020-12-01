@@ -36,7 +36,6 @@ enum class State
 float temp;
 
 /* Heap allocated globally accessible instances (Singletons) */
-//E201C *phSensor = new E201C(REF_VOLTAGE, ADC_MAX_VAL_REF, PH_REF_1, PH_REF_2, PH_SENSOR_CHANNEL);
 DS18B20 *tempSensor = new DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 StateMachine<State> *stateMachine = new StateMachine<State>(State::IDLE, idle);
