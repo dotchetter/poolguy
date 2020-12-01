@@ -38,6 +38,7 @@ float temp;
 /* Heap allocated globally accessible instances (Singletons) */
 DS18B20 *tempSensor = new DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
+DS18B20 *tempSensor = new DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 StateMachine<State> *stateMachine = new StateMachine<State>(State::IDLE, idle);
 
 
