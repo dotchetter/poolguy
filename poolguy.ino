@@ -19,6 +19,19 @@ const char THING_ID[] = DEVICE_ID;
 const char SSID[]     = WIFI_SSID;
 const char PASS[]     = WIFI_PASS;
 
+/* Method declarations */
+void idle();
+void transmit_telemetry();
+void wifi_error();
+
+/* State enums */
+enum class State
+{
+    IDLE,
+    TRANSMIT_TELEMETRY,
+    WIFI_ERROR
+};
+
 /* Arduino IoT Cloud properties */
 float temp;
 
@@ -26,6 +39,7 @@ float temp;
 //E201C *phSensor = new E201C(REF_VOLTAGE, ADC_MAX_VAL_REF, PH_REF_1, PH_REF_2, PH_SENSOR_CHANNEL);
 DS18B20 *tempSensor = new DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
+StateMachine<State> *stateMachine = new StateMachine<State>(State::IDLE, idle);
 
 
 void tempChanged()
@@ -35,6 +49,9 @@ void tempChanged()
     Serial.println(" C");
 }
 
+    /* Configure StateMachine instance with states and chains */
+    stateMachine->addState(State::TRANSMIT_TELEMETRY, transmit_telemetry);
+    stateMachine->addState(State::WIFI_ERROR, wifi_error);
 
 void setup()
 {
@@ -45,6 +62,7 @@ void setup()
 
     setDebugMessageLevel(2);
     ArduinoCloud.printDebugInfo();
+    stateMachine->transitionTo(State::TRANSMIT_TELEMETRY);
 }
 
 
@@ -56,4 +74,17 @@ void loop()
     last_iter = millis();
     ArduinoCloud.update();
     LowPower.sleep(STDBY_TIME_MS);
+    stateMachine->release();
+}
+
+
+void wifi_error()
+{
+    stateMachine->release();
+}
+
+
+void loop() 
+{
+    stateMachine->next()();
 }
