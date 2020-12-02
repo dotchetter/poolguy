@@ -28,7 +28,7 @@ enum class State
 {
     IDLE,
     TRANSMIT_TELEMETRY,
-    WIFI_ERROR
+    SLEEP
 };
 
 /* Arduino IoT Cloud properties */
