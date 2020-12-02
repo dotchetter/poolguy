@@ -21,7 +21,10 @@ const char PASS[]     = WIFI_PASS;
 /* Method declarations */
 void idle();
 void transmit_telemetry();
-void wifi_error();
+void sleep();
+
+/* Arduino IoT Cloud properties */
+float temp;
 
 /* State enums */
 enum class State
@@ -31,9 +34,6 @@ enum class State
     SLEEP
 };
 
-/* Arduino IoT Cloud properties */
-float temp;
-
 /* Heap allocated globally accessible instances (Singletons) */
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 DS18B20 *tempSensor = new DS18B20(TEMP_PORT_GROUP, PORT_PA16);
@@ -42,36 +42,17 @@ StateMachine<State> *stateMachine = new StateMachine<State>(State::IDLE, idle);
 
 void setup()
 {   
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, 1);
-
     /* Configure StateMachine instance with states and chains */
     stateMachine->addState(State::TRANSMIT_TELEMETRY, transmit_telemetry);
-    stateMachine->addState(State::WIFI_ERROR, wifi_error);
+    stateMachine->addState(State::SLEEP, sleep);
 
     /* Configure integration with Arduino IoT Cloud */
     ArduinoCloud.setThingId(THING_ID);
-    ArduinoCloud.addProperty(temp, READWRITE, 60 * SECONDS);
+    ArduinoCloud.addProperty(temp, READWRITE, 5 * SECONDS);
     ArduinoCloud.begin(ArduinoIoTPreferredConnection);
     
     /* Set the WiFi module in low power mode */
     WiFi.lowPowerMode();
-}
-
-
-void idle()
-{
-    static uint64_t last_sleep;
-    if (millis() - last_sleep > RUNTIME_MS)
-    {
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(1000);
-        last_sleep = millis();
-        LowPower.sleep(SLEEP_MS);
-        delay(1000);
-        NVIC_SystemReset();
-    }
-    stateMachine->transitionTo(State::TRANSMIT_TELEMETRY);
 }
 
 
@@ -83,9 +64,28 @@ void transmit_telemetry()
 }
 
 
-void wifi_error()
+void sleep()
 {
+    delay(1000);
+    LowPower.deepSleep(SLEEP_TIME);
+    delay(1000);
     stateMachine->release();
+}
+
+
+void idle()
+{
+    static uint64_t last_sleep;
+    
+    if (millis() - last_sleep > RUN_TIME)
+    {
+        last_sleep = millis();
+        stateMachine->transitionTo(State::SLEEP);
+    }
+    else
+    {
+        stateMachine->transitionTo(State::TRANSMIT_TELEMETRY);
+    }
 }
 
 
