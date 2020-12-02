@@ -4,6 +4,7 @@
  * Program: Source file for driver module
  * Compiler: ARM-GCC 
  * Program Version 1.0
+ * Hardware support: Atmel SAMD series MCU
  * Program Description: This file contains source code
                         for the driver for the DSB18B20
                         onewire sensor module. It is not
