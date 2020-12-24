@@ -21,17 +21,19 @@ const char PASS[]     = WIFI_PASS;
 /* Method declarations */
 void idle();
 void transmit_telemetry();
-void sleep();
+void wifi_connect();
 
 /* Arduino IoT Cloud properties */
 float temp;
+int batterylevel;
+int interval = INTERVAL;
 
-/* State enums */
-enum class State
+/* States enums */
+enum class States
 {
     IDLE,
     TRANSMIT_TELEMETRY,
-    SLEEP
+    WIFI_CONNECT
 };
 
 /* Heap allocated globally accessible instances (Singletons) */
@@ -113,6 +115,14 @@ void transmit_telemetry()
     
     stateMachine.release();
 }
+
+
+int flash()
+{
+    static uint8_t last_value = 0;
+    
+    last_value = !last_value;
+    return last_value;
 }
 
 
@@ -138,16 +148,27 @@ void wifi_connect()
 
 void idle()
 {
-    static uint64_t last_sleep;
+    static uint64_t last_run;
     
-    if (millis() - last_sleep > RUN_TIME)
+    if (WiFi.status() == WL_CONNECTED)
     {
-        last_sleep = millis();
-        stateMachine->transitionTo(State::SLEEP);
-    }
+        digitalWrite(STATUS_LED_PIN, HIGH);
+     
+        if (millis() - last_run > interval * SECOND)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                digitalWrite(STATUS_LED_PIN, flash());
+                delay(75);
+            }
+     
+            Serial.println("Transmitting");
+            stateMachine.transitionTo(States::TRANSMIT_TELEMETRY);
+            last_run = millis();        
+        }
+    }    
     else
     {
-        stateMachine->transitionTo(State::TRANSMIT_TELEMETRY);
         stateMachine.transitionTo(States::WIFI_CONNECT);
     }
 }
@@ -155,5 +176,5 @@ void idle()
 
 void loop() 
 {
-    stateMachine->next()();
+    stateMachine.next()();
 }
