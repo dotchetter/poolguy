@@ -64,12 +64,23 @@ void transmit_telemetry()
 }
 
 
-void sleep()
+void wifi_connect()
 {
-    delay(1000);
-    LowPower.deepSleep(SLEEP_TIME);
-    delay(1000);
-    stateMachine->release();
+    static uint64_t last_led_update;
+
+    if  (millis() - last_led_update > 2000)
+    {
+        Serial.println("Connecting");
+        
+        for (int i = 0; i < 12; i++)
+        {
+            digitalWrite(STATUS_LED_PIN, flash());
+            delay(200);
+        }
+
+        WiFi.begin(WIFI_SSID, WIFI_PASS);
+        last_led_update = millis();            
+    }
 }
 
 
@@ -85,6 +96,7 @@ void idle()
     else
     {
         stateMachine->transitionTo(State::TRANSMIT_TELEMETRY);
+        stateMachine.transitionTo(States::WIFI_CONNECT);
     }
 }
 
