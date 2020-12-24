@@ -289,9 +289,9 @@ float DS18B20::GetTemperature(const char unit)
 
     switch (unit)
     {
-        case 'C': return celcius; break;
-        case 'c': return celcius; break;
-        case 'F': return fahrenheit; break;
-        case 'f': return fahrenheit; break;
+        case 'C': return round(celcius); break;
+        case 'c': return round(celcius); break;
+        case 'F': return round(fahrenheit); break;
+        case 'f': return round(fahrenheit); break;
     }
 }
