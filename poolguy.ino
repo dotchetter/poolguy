@@ -50,9 +50,36 @@ void setup()
     ArduinoCloud.setThingId(THING_ID);
     ArduinoCloud.addProperty(temp, READWRITE, 5 * SECONDS);
     ArduinoCloud.begin(ArduinoIoTPreferredConnection);
+
+
+int read_batterylevel()
+{
+    uint32_t sum = 0;
+    float voltage = 0.0;
+    float output = 0.0;
+    const float battery_max = 3.99;
+    const float battery_min = 3.0;
+
+    /* Read the value on ADC_BATTERY ( 0 - 1023 ) */
+    int battery_level = analogRead(ADC_BATTERY);
     
-    /* Set the WiFi module in low power mode */
-    WiFi.lowPowerMode();
+    /* Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 4.3V): */
+    float readvoltage = (battery_level * (4.3 / 1023.0)) * 0.969543;
+  
+    /* round value by two precision */
+    voltage = roundf(readvoltage * 100) / 100;
+    output = round((voltage - battery_min) / (battery_max - battery_min) * 100);
+    
+    if (output >= 0 && output < 100)
+    {
+        return output;   
+    }      
+    else if (output < 0)
+    {
+        return -1.0f;
+    }
+
+    return 100.0f;
 }
 
 
