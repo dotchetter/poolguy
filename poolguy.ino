@@ -36,20 +36,30 @@ enum class State
 
 /* Heap allocated globally accessible instances (Singletons) */
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
-DS18B20 *tempSensor = new DS18B20(TEMP_PORT_GROUP, PORT_PA16);
-StateMachine<State> *stateMachine = new StateMachine<State>(State::IDLE, idle);
+DS18B20 tempSensor = DS18B20(TEMP_PORT_GROUP, PORT_PA16);
+StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
 
 
 void setup()
-{   
+{
+    Serial.begin(38400);
+    //DBG_INFO(F("*"));
+    digitalWrite(STATUS_LED_PIN, flash());
+
+    /* Configure peripherals */
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    pinMode(MAIN_BUTTON_PIN, INPUT);
+
     /* Configure StateMachine instance with states and chains */
-    stateMachine->addState(State::TRANSMIT_TELEMETRY, transmit_telemetry);
-    stateMachine->addState(State::SLEEP, sleep);
+    stateMachine.addState(States::TRANSMIT_TELEMETRY, transmit_telemetry);
+    stateMachine.addState(States::WIFI_CONNECT, wifi_connect);
 
     /* Configure integration with Arduino IoT Cloud */
     ArduinoCloud.setThingId(THING_ID);
-    ArduinoCloud.addProperty(temp, READWRITE, 5 * SECONDS);
+    ArduinoCloud.addProperty(temp, READWRITE, ON_CHANGE);
+    ArduinoCloud.addProperty(batterylevel, READWRITE, ON_CHANGE);
     ArduinoCloud.begin(ArduinoIoTPreferredConnection);
+}
 
 
 int read_batterylevel()
@@ -85,9 +95,24 @@ int read_batterylevel()
 
 void transmit_telemetry()
 {
-    temp = tempSensor->GetTemperature('C');
-    ArduinoCloud.update();
-    stateMachine->release();
+    static uint64_t last_batt_update;
+
+    /* Introduce artificial cusioning of battery percentage */ 
+    if (millis() - last_batt_update > BATT_DELAY)
+    {
+        batterylevel = read_batterylevel();
+        last_batt_update = millis();
+    }
+
+    temp = tempSensor.GetTemperature('C');
+    
+    for (int i = 0; i < UPDATE_CYCLES; i++)
+    {
+        ArduinoCloud.update();
+    }
+    
+    stateMachine.release();
+}
 }
 
 
