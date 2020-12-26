@@ -22,8 +22,9 @@
 #define SECOND               1000UL
 #define MINUTE               60 * SECOND
 
-#define RUN_TIME             15 * SECOND
-#define SLEEP_TIME           10 * MINUTE
+#define WIFI_SSID            ""
+#define WIFI_PASS            ""
+#define DEVICE_ID            ""
 #define INTERVAL             10
 #define UPDATE_CYCLES        F_CPU / 1000000UL
 #define BATT_DELAY           1 * MINUTE
