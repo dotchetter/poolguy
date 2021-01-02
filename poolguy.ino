@@ -40,7 +40,6 @@ WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 DS18B20 tempSensor = DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
 
-
 void setup()
 {
     Serial.begin(38400);
@@ -151,10 +150,8 @@ void idle()
     static uint64_t last_run;
     
     if (WiFi.status() == WL_CONNECTED)
-    {
-        digitalWrite(STATUS_LED_PIN, HIGH);
-     
-        if (millis() - last_run > interval * SECOND)
+    {     
+        if (millis() - last_run > INTERVAL)
         {
             for (int i = 0; i < 12; i++)
             {
