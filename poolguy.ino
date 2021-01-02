@@ -26,7 +26,6 @@ void wifi_connect();
 /* Arduino IoT Cloud properties */
 float temp;
 int batterylevel;
-int interval = INTERVAL;
 
 /* States enums */
 enum class States
@@ -45,8 +44,6 @@ StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
 void setup()
 {
     Serial.begin(38400);
-    //DBG_INFO(F("*"));
-    digitalWrite(STATUS_LED_PIN, flash());
 
     /* Configure peripherals */
     pinMode(STATUS_LED_PIN, OUTPUT);
