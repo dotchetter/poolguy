@@ -63,11 +63,8 @@ void setup()
 
 int read_batterylevel()
 {
-    uint32_t sum = 0;
     float voltage = 0.0;
     float output = 0.0;
-    const float battery_max = 3.99;
-    const float battery_min = 3.0;
 
     /* Read the value on ADC_BATTERY ( 0 - 1023 ) */
     int battery_level = analogRead(ADC_BATTERY);
