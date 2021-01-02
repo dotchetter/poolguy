@@ -74,18 +74,24 @@ int read_batterylevel()
   
     /* round value by two precision */
     voltage = roundf(readvoltage * 100) / 100;
-    output = round((voltage - battery_min) / (battery_max - battery_min) * 100);
+    
+    #ifdef DEBUG
+    Serial.print("DEBUG: Voltage: ");
+    Serial.println(voltage);
+    #endif
+
+    output = round((voltage - BATT_MIN_V) / (BATT_MAX_V - BATT_MIN_V) * 100);
     
     if (output >= 0 && output < 100)
     {
-        return output;   
+        return round(output);   
     }      
     else if (output < 0)
     {
-        return -1.0f;
+        return 1;
     }
 
-    return 100.0f;
+    return 100;
 }
 
 
