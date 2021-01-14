@@ -27,6 +27,7 @@
 #define DEVICE_ID            ""
 #define INTERVAL             30 * SECOND
 #define UPDATE_CYCLES        F_CPU / 1000000UL
+
 #define BATT_DELAY           1 * MINUTE
 #define BATT_MAX_V           3.950
 #define BATT_MIN_V           3.280
