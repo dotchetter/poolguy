@@ -96,15 +96,7 @@ int read_batterylevel()
 
 void transmit_telemetry()
 {
-    static uint64_t last_batt_update;
-
-    /* Introduce artificial cusioning of battery percentage */ 
-    if (millis() - last_batt_update > BATT_DELAY)
-    {
-        batterylevel = read_batterylevel();
-        last_batt_update = millis();
-    }
-
+    batterylevel = read_batterylevel();
     temp = tempSensor.GetTemperature('C');
     
     for (int i = 0; i < UPDATE_CYCLES; i++)
