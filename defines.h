@@ -33,7 +33,10 @@
 #define BATT_DELAY           1 * MINUTE
 #define BATT_MAX_V           3.950
 #define BATT_MIN_V           3.280
+#define DEVMODE              0
 
-#define DEBUG                1
+
+/* Macros */
+#define TIME_PASSED(ref, ts) (millis() - ts > ref)
 
 #endif // DEFINITIONS_H_
