@@ -28,7 +28,7 @@
 #define WIFI_PASS            ""
 #define DEVICE_ID            ""
 #define INTERVAL             30 * SECOND
-#define UPDATE_CYCLES        F_CPU / 1000000UL
+#define UPDATE_CYCLES        128
 
 #define BATT_DELAY           1 * MINUTE
 #define BATT_MAX_V           3.950
