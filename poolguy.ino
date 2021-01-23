@@ -22,6 +22,7 @@ const char PASS[]     = WIFI_PASS;
 void idle();
 void transmit_telemetry();
 void wifi_connect();
+void deep_sleep();
 
 /* Arduino IoT Cloud properties */
 float temp;
@@ -32,7 +33,8 @@ enum class States
 {
     IDLE,
     TRANSMIT_TELEMETRY,
-    WIFI_CONNECT
+    WIFI_CONNECT,
+    DEEP_SLEEP
 };
 
 /* Heap allocated globally accessible instances (Singletons) */
@@ -43,14 +45,18 @@ StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
 void setup()
 {
     Serial.begin(38400);
+    WiFi.lowPowerMode();
 
     /* Configure peripherals */
     pinMode(STATUS_LED_PIN, OUTPUT);
     pinMode(MAIN_BUTTON_PIN, INPUT);
-
+    
     /* Configure StateMachine instance with states and chains */
     stateMachine.addState(States::TRANSMIT_TELEMETRY, transmit_telemetry);
     stateMachine.addState(States::WIFI_CONNECT, wifi_connect);
+    stateMachine.addState(States::DEEP_SLEEP, deep_sleep);
+
+    stateMachine.setChainedState(States::TRANSMIT_TELEMETRY, States::DEEP_SLEEP);
 
     /* Configure integration with Arduino IoT Cloud */
     ArduinoCloud.setThingId(THING_ID);
@@ -62,25 +68,21 @@ void setup()
 
 int read_batterylevel()
 {
+    float diff;
     float voltage = 0.0;
     float output = 0.0;
+    uint16_t battery_level;
 
     /* Read the value on ADC_BATTERY ( 0 - 1023 ) */
-    int battery_level = analogRead(ADC_BATTERY);
+    battery_level = analogRead(ADC_BATTERY);
     
     /* Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 4.3V): */
     float readvoltage = (battery_level * (4.3 / 1023.0)) * 0.969543;
   
     /* round value by two precision */
     voltage = roundf(readvoltage * 100) / 100;
-    
-    #ifdef DEBUG
-    Serial.print("DEBUG: Voltage: ");
-    Serial.println(voltage);
-    #endif
-
     output = round((voltage - BATT_MIN_V) / (BATT_MAX_V - BATT_MIN_V) * 100);
-    
+
     if (output >= 0 && output < 100)
     {
         return round(output);   
@@ -89,20 +91,37 @@ int read_batterylevel()
     {
         return 1;
     }
-
     return 100;
 }
 
 
-void transmit_telemetry()
+void deep_sleep()
 {
+    LowPower.deepSleep(INTERVAL);
+    stateMachine.release();
+}
+
+
+void transmit_telemetry()
+{    
     batterylevel = read_batterylevel();
     temp = tempSensor.GetTemperature('C');
+    
+    #if DEVMODE
+        Serial.print("Transmitting temperature: ");Serial.print(temp);Serial.println(" C");
+        Serial.print("Transmitting battery: "); Serial.print(batterylevel);Serial.println("%");
+    #endif
+
+    for (int i = 0; i < 12; i++)
+    {
+        digitalWrite(STATUS_LED_PIN, flash());
+        delay(45);        
+    }
     
     for (int i = 0; i < UPDATE_CYCLES; i++)
     {
         ArduinoCloud.update();
-    }
+    }    
     
     stateMachine.release();
 }
@@ -119,42 +138,29 @@ int flash()
 
 void wifi_connect()
 {
-    static uint64_t last_led_update;
+    #if DEVMODE
+        Serial.print("Connecting to WiFI... ");
+    #endif
 
-    if  (millis() - last_led_update > 2000)
+    for (int i = 0; i < 12; i++)
     {
-        Serial.println("Connecting");
-        
-        for (int i = 0; i < 12; i++)
-        {
-            digitalWrite(STATUS_LED_PIN, flash());
-            delay(200);
-        }
-
-        WiFi.begin(WIFI_SSID, WIFI_PASS);
-        last_led_update = millis();            
+        digitalWrite(STATUS_LED_PIN, flash());
+        delay(200);
     }
+
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    
+    #if DEVMODE
+        WiFi.status() == WL_CONNECTED ? Serial.println("success") : Serial.println("failed");
+    #endif
 }
 
 
 void idle()
-{
-    static uint64_t last_run;
-    
+{    
     if (WiFi.status() == WL_CONNECTED)
     {     
-        if (millis() - last_run > INTERVAL)
-        {
-            for (int i = 0; i < 12; i++)
-            {
-                digitalWrite(STATUS_LED_PIN, flash());
-                delay(75);
-            }
-     
-            Serial.println("Transmitting");
-            stateMachine.transitionTo(States::TRANSMIT_TELEMETRY);
-            last_run = millis();        
-        }
+        stateMachine.transitionTo(States::TRANSMIT_TELEMETRY);
     }    
     else
     {
