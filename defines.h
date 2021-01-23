@@ -14,6 +14,8 @@
  * Written on 2020-11-26, Simon Olofsson
  */
 
+#define FW_VERSION           "1.0.5"
+
 #define TEMP_PORT_GROUP      0
 #define TEMP_PINMASK         PORT_PA16
 #define STATUS_LED_PIN       5

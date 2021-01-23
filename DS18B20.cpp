@@ -208,6 +208,23 @@ uint8_t DS18B20::ReadScratchPad()
 }
 
 
+float DS18B20::ConservativeFractionRound(float temp)
+/*
+* Round floats to the nearest whole or half
+* number. E.g: 24.3253 == 24.0; 25.693 == 25.5
+*/
+{
+    float truncated_temp = trunc(temp);
+    float temp_fractions = (temp - truncated_temp);
+    
+    switch(temp_fractions >= 0.5)
+    {
+        case 0: return truncated_temp;
+        case 1: return (truncated_temp + 0.5);
+    }
+}
+
+
 float DS18B20::GetTemperature(const char unit)
 /*
 * Initiate communcation with the DSB18B20, 
@@ -289,9 +306,9 @@ float DS18B20::GetTemperature(const char unit)
 
     switch (unit)
     {
-        case 'C': return round(celcius); break;
-        case 'c': return round(celcius); break;
-        case 'F': return round(fahrenheit); break;
-        case 'f': return round(fahrenheit); break;
+        case 'C': return this->ConservativeFractionRound(celcius); break;
+        case 'c': return this->ConservativeFractionRound(celcius); break;
+        case 'F': return this->ConservativeFractionRound(fahrenheit); break;
+        case 'f': return this->ConservativeFractionRound(fahrenheit); break;
     }
 }

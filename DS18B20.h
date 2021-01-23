@@ -93,13 +93,13 @@ Buy us a coffee? https://www.buymeacoffee.com/dotchetter
 * accounted for. These defined describe these periods.
 */
 
-#define TIME_SLOT_US 60
-#define RECOVERY_US 1
+#define TIME_SLOT_US 70
+#define RECOVERY_US 5
 #define WRITE_1_LOW_US 60
 #define WRITE_0_LOW_US 1
 #define RESET_US 480
-#define PRECEDENCE_DETECT_HIGH_US 15
-#define PRECEDENCE_DETECT_LOW_US 60
+#define PRECEDENCE_DETECT_HIGH_US 12
+#define PRECEDENCE_DETECT_LOW_US 70
 #define CONVERSION_TIME_US 750
 
 /* Bitmasks */
@@ -156,10 +156,21 @@ class DS18B20
 *                           a defined amount of microseconds for the sensor
 *                           to process the command.
 *
+* METHOD: ConservativeFractionRound: Round floats to temp.5 if fractions are .500 or
+*                                    greater, otherwise return temp.0.
+*                                      
+*
 * METHOD: ReadScratchPad:   Read one byte of data from the sensor.
 *                           The size of a byte is iterated over, and
 *                           ultimately concatenates a byte from the 
 *                           sensor received over one wire.
+*
+* METHOD: GetTemperature:   Get the temperature from the sensor. Arguabily,
+*                           the only method ever used by users. The method
+*                           will return the temperature for celsius of fahrenheit
+*                           depending on the parameter ('f or 'c', 'F' or 'C').
+*                           The temperature values are rounded off conservatively
+*                           to the closest whole or half number. x.0, x.5, y.0 and so on.
 */
 private:
     uint32_t pinMask;
@@ -173,6 +184,7 @@ private:
     void SuspendMicroSeconds(uint32_t microSeconds);
     void SendResetCommand();
     void SendByteCommand(uint8_t command);
+    float ConservativeFractionRound(float temp);
     uint8_t ReadScratchPad();
 
 public:
