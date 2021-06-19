@@ -14,7 +14,7 @@
  * Written on 2020-11-26, Simon Olofsson
  */
 
-#define FW_VERSION           "1.0.5"
+#define FW_VERSION           "1.1.0"
 
 #define TEMP_PORT_GROUP      0
 #define TEMP_PINMASK         PORT_PA16
@@ -24,13 +24,12 @@
 #define SECOND               1000UL
 #define MINUTE               60 * SECOND
 
-#define WIFI_SSID            ""
-#define WIFI_PASS            ""
-#define DEVICE_ID            ""
+#define WIFI_SSID            "" // Define before flashing, delete before committing
+#define WIFI_PASS            "" // Define before flashing, delete before committing
+#define DEVICE_ID            "" // Define before flashing, delete before committing
 #define INTERVAL             30 * SECOND
 #define UPDATE_CYCLES        128
 
-#define BATT_DELAY           1 * MINUTE
 #define BATT_MAX_V           3.950
 #define BATT_MIN_V           3.280
 #define DEVMODE              0

@@ -60,15 +60,14 @@ void setup()
 
     /* Configure integration with Arduino IoT Cloud */
     ArduinoCloud.setThingId(THING_ID);
-    ArduinoCloud.addProperty(temp, READWRITE, ON_CHANGE);
-    ArduinoCloud.addProperty(batterylevel, READWRITE, ON_CHANGE);
+    ArduinoCloud.addProperty(temp, READWRITE);
+    ArduinoCloud.addProperty(batterylevel, READWRITE);
     ArduinoCloud.begin(ArduinoIoTPreferredConnection);
 }
 
 
 int read_batterylevel()
 {
-    float diff;
     float voltage = 0.0;
     float output = 0.0;
     uint16_t battery_level;
@@ -115,7 +114,7 @@ void transmit_telemetry()
     for (int i = 0; i < 12; i++)
     {
         digitalWrite(STATUS_LED_PIN, flash());
-        delay(45);        
+        delay(45);
     }
     
     for (int i = 0; i < UPDATE_CYCLES; i++)
