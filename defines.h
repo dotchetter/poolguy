@@ -14,7 +14,6 @@
  * Written on 2020-11-26, Simon Olofsson
  */
 
-#define FW_VERSION           "1.1.0"
 #define FW_VERSION           "1.2.1"
 
 #define TEMP_PORT_GROUP      0
@@ -23,18 +22,35 @@
 #define MAIN_BUTTON_PIN      6
 
 #define DHT_SENSOR_PIN       4
+
 #define SECOND               1000UL
 #define MINUTE               60 * SECOND
+#define HOUR                 60 * MINUTE
+#define DAY                  24 * HOUR
 
-#define WIFI_SSID            "" // Define before flashing, delete before committing
-#define WIFI_PASS            "" // Define before flashing, delete before committing
-#define DEVICE_ID            "" // Define before flashing, delete before committing
-#define INTERVAL             30 * SECOND
-#define UPDATE_CYCLES        128
+#define WIFI_SSID            ""
+#define WIFI_PASS            "" 
+#define DEVICE_ID            ""
+
+// Deep sleep time
+#define INTERVAL             1 * HOUR
 
 #define BATT_MAX_V           3.950
 #define BATT_MIN_V           3.280
+
 #define DEVMODE              0
+#define CONTENT_TYPE         "application/json"
+
+#if DEVMODE
+    #define SERVER_ROOT      ""
+    #define SUB_PATH         ""
+    #define SERVER_PORT      8000
+#else
+    #define SERVER_ROOT      ""
+    #define SUB_PATH         ""
+    #define SERVER_PORT      80
+#endif
+
 
 
 /* Macros */
