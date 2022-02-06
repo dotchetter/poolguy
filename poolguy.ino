@@ -6,11 +6,16 @@
         TEMP SENSOR:            DSB18B20 ONEWIRE    (Connected to D8)
 */
 
+
 #include "defines.h"
 #include "DS18B20.h"
+#include <WiFiNINA.h>
 #include <StateMachine.h>
 #include <ArduinoLowPower.h>
+#include <ArduinoHttpClient.h>
 #include <DHT.h>
+#include <ArduinoJson.h>
+
 
 /* Constants */
 const char THING_ID[] = DEVICE_ID;
@@ -19,7 +24,7 @@ const char PASS[]     = WIFI_PASS;
 
 /* Method declarations */
 void idle();
-void transmit_telemetry();
+void transmit_data();
 void wifi_connect();
 void deep_sleep();
 
@@ -27,27 +32,37 @@ void deep_sleep();
 enum class States
 {
     IDLE,
-    TRANSMIT_TELEMETRY,
+    TRANSMIT_DATA,
     WIFI_CONNECT,
     DEEP_SLEEP
 };
 
+
+/* Globally accessible singletons */
+WiFiClient wifi;
+HttpClient client = HttpClient(wifi, SERVER_ROOT, SERVER_PORT);
 DHT dhtSensor = DHT(DHT_SENSOR_PIN, DHT11);
 DS18B20 tempSensor = DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
 
+
 void setup()
 {
     Serial.begin(38400);
+    tempSensor.begin();
     dhtSensor.begin();
     WiFi.lowPowerMode();
 
     /* Configure peripherals */
     pinMode(STATUS_LED_PIN, OUTPUT);
     pinMode(MAIN_BUTTON_PIN, INPUT);
-    
+    client.setTimeout(10 * SECOND);
+
+    /* Set the main button as an interrupt, allowing it to stop sleep state */
+    LowPower.attachInterruptWakeup(MAIN_BUTTON_PIN, transmit_data, CHANGE);
+
     /* Configure StateMachine instance with states and chains */
-    stateMachine.addState(States::TRANSMIT_TELEMETRY, transmit_telemetry);
+    stateMachine.addState(States::TRANSMIT_DATA, transmit_data);
     stateMachine.addState(States::WIFI_CONNECT, wifi_connect);
     stateMachine.addState(States::DEEP_SLEEP, deep_sleep);
 
@@ -55,21 +70,28 @@ void setup()
 }
 
 
-int read_batterylevel()
+float read_battery_voltage()
 {
-    float voltage = 0.0;
-    float output = 0.0;
     uint16_t battery_level;
 
     /* Read the value on ADC_BATTERY ( 0 - 1023 ) */
     battery_level = analogRead(ADC_BATTERY);
+    float voltage = 0.0;
     
     /* Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 4.3V): */
     float readvoltage = (battery_level * (4.3 / 1023.0)) * 0.969543;
   
     /* round value by two precision */
     voltage = roundf(readvoltage * 100) / 100;
-    output = round((voltage - BATT_MIN_V) / (BATT_MAX_V - BATT_MIN_V) * 100);
+    
+    return voltage;
+}
+
+
+int read_batterylevel()
+{
+    float voltage = read_battery_voltage();
+    float output = round((voltage - BATT_MIN_V) / (BATT_MAX_V - BATT_MIN_V) * 100);
 
     if (output >= 0 && output < 100)
     {
@@ -157,18 +179,14 @@ void wifi_connect()
     #if DEVMODE
         Serial.print("Connecting to WiFI... ");
     #endif
-
-    for (int i = 0; i < 12; i++)
-    {
-        digitalWrite(STATUS_LED_PIN, flash());
-        delay(200);
-    }
-
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
     
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+        
     #if DEVMODE
         WiFi.status() == WL_CONNECTED ? Serial.println("success") : Serial.println("failed");
     #endif
+
+    flash(3, 1000);
 }
 
 
@@ -176,7 +194,7 @@ void idle()
 {    
     if (WiFi.status() == WL_CONNECTED)
     {     
-        stateMachine.transitionTo(States::TRANSMIT_TELEMETRY);
+        stateMachine.transitionTo(States::TRANSMIT_DATA);
     }    
     else
     {
