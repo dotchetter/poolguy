@@ -9,8 +9,6 @@
 #include "defines.h"
 #include "DS18B20.h"
 #include <StateMachine.h>
-#include <ArduinoIoTCloud.h>
-#include <Arduino_ConnectionHandler.h>
 #include <ArduinoLowPower.h>
 #include <DHT.h>
 
@@ -25,10 +23,6 @@ void transmit_telemetry();
 void wifi_connect();
 void deep_sleep();
 
-/* Arduino IoT Cloud properties */
-float temp;
-int batterylevel;
-
 /* States enums */
 enum class States
 {
@@ -38,8 +32,6 @@ enum class States
     DEEP_SLEEP
 };
 
-/* Heap allocated globally accessible instances (Singletons) */
-WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 DHT dhtSensor = DHT(DHT_SENSOR_PIN, DHT11);
 DS18B20 tempSensor = DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
@@ -59,13 +51,7 @@ void setup()
     stateMachine.addState(States::WIFI_CONNECT, wifi_connect);
     stateMachine.addState(States::DEEP_SLEEP, deep_sleep);
 
-    stateMachine.setChainedState(States::TRANSMIT_TELEMETRY, States::DEEP_SLEEP);
-
-    /* Configure integration with Arduino IoT Cloud */
-    ArduinoCloud.setThingId(THING_ID);
-    ArduinoCloud.addProperty(temp, READWRITE);
-    ArduinoCloud.addProperty(batterylevel, READWRITE);
-    ArduinoCloud.begin(ArduinoIoTPreferredConnection);
+    stateMachine.setChainedState(States::TRANSMIT_DATA, States::DEEP_SLEEP);
 }
 
 
@@ -104,39 +90,65 @@ void deep_sleep()
 }
 
 
-void transmit_telemetry()
+void transmit_data()
 {    
-    batterylevel = read_batterylevel();
-    temp = tempSensor.GetTemperature('C');
-    
-    #if DEVMODE
-        Serial.print("Transmitting temperature: ");Serial.print(temp);Serial.println(" C");
-        Serial.print("Transmitting battery: "); Serial.print(batterylevel);Serial.println("%");
+    char serializedJsonOutput[128];
+    byte isCharging = 0;
+    float voltage = read_battery_voltage();
+    int batterylevel = read_batterylevel();
     float waterTemperature = tempSensor.GetTemperature('C');
     float humidity = dhtSensor.readHumidity();
+    float airTemperature = dhtSensor.readTemperature();
+
+
+    if (voltage > BATT_MAX_V)
+        isCharging = 1;
+  
+    // Assemble the body of the POST message:
+    StaticJsonDocument<128> jsonDocument;
+    jsonDocument["water_temp"] = waterTemperature;
+    jsonDocument["battery_level"] = batterylevel;
+    jsonDocument["is_charging"] = isCharging;
+    jsonDocument["air_temp"] = airTemperature;
+    jsonDocument["air_humidity"] = humidity;
+
+    // Serialize the JSON object to char array
+    serializeJson(jsonDocument, serializedJsonOutput);
+
+    #ifdef DEVMODE
+        Serial.println("making POST request");
+        Serial.println(serializedJsonOutput);
     #endif
 
-    for (int i = 0; i < 12; i++)
-    {
-        digitalWrite(STATUS_LED_PIN, flash());
-        delay(45);
-    }
+    // send the POST request
+    client.post(SUB_PATH, CONTENT_TYPE, serializedJsonOutput);
+        
+    // read the status code and body of the response
+    int statusCode = client.responseStatusCode();
     
-    for (int i = 0; i < UPDATE_CYCLES; i++)
-    {
-        ArduinoCloud.update();
-    }    
-    
+    #ifdef DEVMODE
+        Serial.print("Status code: ");
+        Serial.println(statusCode);
+        Serial.print("Response: ");
+        Serial.println(client.responseBody());
+    #endif
+
+    flash(waterTemperature, 180);
+
     stateMachine.release();
 }
 
 
-int flash()
+int flash(int times, int ms_delay)
 {
-    static uint8_t last_value = 0;
-    
-    last_value = !last_value;
-    return last_value;
+    int state = 0;
+    for (int i = 0; i < times * 2; i++)
+    {
+        digitalWrite(STATUS_LED_PIN, state);
+        delay(ms_delay);
+        state = !state;
+    }
+    digitalWrite(STATUS_LED_PIN, 0);
 }
 
 
