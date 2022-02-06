@@ -12,6 +12,7 @@
 #include <ArduinoIoTCloud.h>
 #include <Arduino_ConnectionHandler.h>
 #include <ArduinoLowPower.h>
+#include <DHT.h>
 
 /* Constants */
 const char THING_ID[] = DEVICE_ID;
@@ -39,12 +40,14 @@ enum class States
 
 /* Heap allocated globally accessible instances (Singletons) */
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
+DHT dhtSensor = DHT(DHT_SENSOR_PIN, DHT11);
 DS18B20 tempSensor = DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
 
 void setup()
 {
     Serial.begin(38400);
+    dhtSensor.begin();
     WiFi.lowPowerMode();
 
     /* Configure peripherals */
@@ -109,6 +112,8 @@ void transmit_telemetry()
     #if DEVMODE
         Serial.print("Transmitting temperature: ");Serial.print(temp);Serial.println(" C");
         Serial.print("Transmitting battery: "); Serial.print(batterylevel);Serial.println("%");
+    float waterTemperature = tempSensor.GetTemperature('C');
+    float humidity = dhtSensor.readHumidity();
     #endif
 
     for (int i = 0; i < 12; i++)

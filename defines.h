@@ -15,12 +15,14 @@
  */
 
 #define FW_VERSION           "1.1.0"
+#define FW_VERSION           "1.2.1"
 
 #define TEMP_PORT_GROUP      0
 #define TEMP_PINMASK         PORT_PA16
 #define STATUS_LED_PIN       5
 #define MAIN_BUTTON_PIN      6
 
+#define DHT_SENSOR_PIN       4
 #define SECOND               1000UL
 #define MINUTE               60 * SECOND
 
