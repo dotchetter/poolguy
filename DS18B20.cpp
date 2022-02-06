@@ -310,5 +310,6 @@ float DS18B20::GetTemperature(const char unit)
         case 'c': return this->ConservativeFractionRound(celcius); break;
         case 'F': return this->ConservativeFractionRound(fahrenheit); break;
         case 'f': return this->ConservativeFractionRound(fahrenheit); break;
+        default: return this->ConservativeFractionRound(celcius); break;
     }
 }
