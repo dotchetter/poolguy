@@ -28,6 +28,19 @@ DS18B20::DS18B20(uint8_t portGroup, uint32_t pinMask)
 DS18B20::~DS18B20(){}
 
 
+void DS18B20::begin()
+{
+/*
+* Sets the sensor in ready mode, by first resetting. 
+* Calling this method is mandatory before using the 
+* GetTemperature method, since a flush of the sensor is
+* necessary for accurate first reading.
+*/
+
+    this->SendResetCommand();
+    this->isReady = 1;
+}
+
 uint64_t DS18B20::_us_to_cycles(uint32_t us)
 /*
 * Convert microseconds to cpu cycles
@@ -241,6 +254,9 @@ float DS18B20::GetTemperature(const char unit)
 * (Figure 7, DSB18B20 datasheet)
 */
 {
+    if (!this->isReady)
+        return -9999.0f;
+
     float fahrenheit, celcius;
 
     uint8_t readBytes[NUM_SCRATCHPAD_BYTES];
