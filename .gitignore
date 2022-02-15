@@ -32,3 +32,6 @@
 *.app
 
 *idea
+.vs/
+.vscode/
+CppProperties.json
