@@ -28,14 +28,14 @@
 #define HOUR                 60 * MINUTE
 #define DAY                  24 * HOUR
 
-#define WIFI_SSID            ""
-#define WIFI_PASS            "" 
+#define WIFI_SSID            " 
+#define WIFI_PASS            " 
 #define DEVICE_ID            ""
 
-// Deep sleep time
-#define INTERVAL             1 * HOUR
+// How often Poolguy whould awake and send telemetry
+#define INTERVAL             1 * MINUTE
 
-#define BATT_MAX_V           3.950
+#define BATT_MAX_V           3.945
 #define BATT_MIN_V           3.280
 
 #define DEVMODE              0
@@ -50,6 +50,7 @@
     #define SUB_PATH         ""
     #define SERVER_PORT      80
 #endif
+
 
 
 
