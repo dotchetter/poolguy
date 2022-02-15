@@ -21,6 +21,7 @@
 const char THING_ID[] = DEVICE_ID;
 const char SSID[]     = WIFI_SSID;
 const char PASS[]     = WIFI_PASS;
+unsigned long awoke_millis  =    millis();
 
 /* Method declarations */
 void idle();
@@ -107,55 +108,67 @@ int read_batterylevel()
 
 void deep_sleep()
 {
-    LowPower.deepSleep(INTERVAL);
-    stateMachine.release();
+    // Calculate how long it took to perform 
+    // the workload and deduct it from the sleep time.
+    unsigned long time_awake = millis() - awoke_millis;
+    unsigned long sleep_time = INTERVAL - time_awake;
+        
+    if (sleep_time > 0)
+    {
+        WiFi.end();
+        LowPower.deepSleep(sleep_time);
+        awoke_millis = millis();
+    }
+    stateMachine.release();    
 }
 
 
 void transmit_data()
 {    
-    char serializedJsonOutput[128];
-    byte isCharging = 0;
+    char serialized_json_output[128];
+    byte is_charging = 0;
     float voltage = read_battery_voltage();
     int batterylevel = read_batterylevel();
     float waterTemperature = tempSensor.GetTemperature('C');
     float humidity = dhtSensor.readHumidity();
     float airTemperature = dhtSensor.readTemperature();
-
+    
 
     if (voltage > BATT_MAX_V)
-        isCharging = 1;
+        is_charging = 1;
+        
   
     // Assemble the body of the POST message:
-    StaticJsonDocument<128> jsonDocument;
-    jsonDocument["water_temp"] = waterTemperature;
-    jsonDocument["battery_level"] = batterylevel;
-    jsonDocument["is_charging"] = isCharging;
-    jsonDocument["air_temp"] = airTemperature;
-    jsonDocument["air_humidity"] = humidity;
+    StaticJsonDocument<128> json_document;
+
+    json_document["water_temp"] = waterTemperature;
+    json_document["battery_level"] = batterylevel;
+    json_document["pwr_bus_voltage"] = voltage;
+    json_document["is_charging"] = isCharging;
+    json_document["air_temp"] = airTemperature;
+    json_document["air_humidity"] = humidity;
+
 
     // Serialize the JSON object to char array
-    serializeJson(jsonDocument, serializedJsonOutput);
+    serializeJson(json_document, serialized_json_output);
 
     #ifdef DEVMODE
-        Serial.println("making POST request");
-        Serial.println(serializedJsonOutput);
+        Serial.println(serialized_json_output);
     #endif
 
     // send the POST request
-    client.post(SUB_PATH, CONTENT_TYPE, serializedJsonOutput);
+    client.post(SUB_PATH, CONTENT_TYPE, serialized_json_output);
         
-    // read the status code and body of the response
-    int statusCode = client.responseStatusCode();
-    
     #ifdef DEVMODE
+        // read the status code and body of the response
+        int status_code = client.responseStatusCode();
         Serial.print("Status code: ");
-        Serial.println(statusCode);
+        Serial.println(status_code);
         Serial.print("Response: ");
         Serial.println(client.responseBody());
     #endif
 
-    flash(waterTemperature, 180);
+    flash(10, 150);
 
     stateMachine.release();
 }
