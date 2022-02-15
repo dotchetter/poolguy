@@ -18,10 +18,11 @@
 
 
 /* Constants */
-const char THING_ID[] = DEVICE_ID;
-const char SSID[]     = WIFI_SSID;
-const char PASS[]     = WIFI_PASS;
+const char THING_ID[]       =    DEVICE_ID;
+const char SSID[]           =    WIFI_SSID;
+const char PASS[]           =    WIFI_PASS;
 unsigned long awoke_millis  =    millis();
+
 
 /* Method declarations */
 void idle();
