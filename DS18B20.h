@@ -177,6 +177,7 @@ private:
     byte isReady = 0;
     uint8_t portGroup;
     uint64_t _us_to_cycles(uint32_t us);
+    void PrepareForTemperatureReading();
     void SetAsInput();
     void SetAsOutput();
     void BusWrite(uint8_t mode);

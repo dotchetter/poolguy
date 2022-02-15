@@ -36,9 +36,8 @@ void DS18B20::begin()
 * GetTemperature method, since a flush of the sensor is
 * necessary for accurate first reading.
 */
-
-    this->SendResetCommand();
-    this->isReady = 1;
+    this->isReady = 1;    
+    this->PrepareForTemperatureReading();
 }
 
 uint64_t DS18B20::_us_to_cycles(uint32_t us)
@@ -50,6 +49,28 @@ uint64_t DS18B20::_us_to_cycles(uint32_t us)
     return (uint64_t)(us) * cycles_per_us;
 }
 
+
+void DS18B20::PrepareForTemperatureReading()
+/*
+* Runs a sequence of commands necessary prior to 
+* getting the temperature from the sensor.
+*/
+{
+     /* Reset the sensor, tell it to skip ROM, and start conversion */ 
+    this->SendResetCommand();
+    this->SendByteCommand(SKIP_ROM_CMD);
+    this->SendByteCommand(CONVERT_CMD);
+
+    /* Allow the conversion to finish by waiting */
+    this->SuspendMicroSeconds(CONVERSION_TIME_US);
+
+    /* Reset once more, skip ROM and read the values it converted */
+    this->SendResetCommand();
+    this->SendByteCommand(SKIP_ROM_CMD);
+
+    /* Send command telling that we want to read the scratch pad */
+    this->SendByteCommand(READ_SCRTC_PD_CMD);
+}
 
 void DS18B20::SetAsInput()
 /*
@@ -255,27 +276,14 @@ float DS18B20::GetTemperature(const char unit)
 */
 {
     if (!this->isReady)
-        return -9999.0f;
+        return 0.0f;
 
     float fahrenheit, celcius;
 
     uint8_t readBytes[NUM_SCRATCHPAD_BYTES];
     uint8_t LSB, MSB, TEMP_HIGH, TEMP_LOW;
 
-    /* Reset the sensor, tell it to skip ROM, and start conversion */ 
-    this->SendResetCommand();
-    this->SendByteCommand(SKIP_ROM_CMD);
-    this->SendByteCommand(CONVERT_CMD);
-
-    /* Allow the conversion to finish by waiting */
-    this->SuspendMicroSeconds(CONVERSION_TIME_US);
-
-    /* Reset once more, skip ROM and read the values it converted */
-    this->SendResetCommand();
-    this->SendByteCommand(SKIP_ROM_CMD);
-
-    /* Send command telling that we want to read the scratch pad */
-    this->SendByteCommand(READ_SCRTC_PD_CMD);
+    this->PrepareForTemperatureReading();
 
     /* Read the temperature values in scratch pad on the device */
     for (int i = 0; i < NUM_SCRATCHPAD_BYTES; i++)
