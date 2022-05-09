@@ -9,25 +9,24 @@
 
 #include "defines.h"
 #include "DS18B20.h"
-#include <WiFiNINA.h>
+
 #include <StateMachine.h>
 #include <ArduinoLowPower.h>
 #include <ArduinoHttpClient.h>
+#include <MKRGSM.h>
 #include <DHT.h>
 #include <ArduinoJson.h>
 
 
+
 /* Constants */
-const char THING_ID[]       =    DEVICE_ID;
-const char SSID[]           =    WIFI_SSID;
-const char PASS[]           =    WIFI_PASS;
-unsigned long awoke_millis  =    millis();
+unsigned long awoke_millis = millis();
 
 
 /* Method declarations */
 void idle();
 void transmit_data();
-void wifi_connect();
+void gsm_connect();
 void deep_sleep();
 
 /* States enums */
@@ -35,37 +34,41 @@ enum class States
 {
     IDLE,
     TRANSMIT_DATA,
-    WIFI_CONNECT,
+    GSM_CONNECT,
     DEEP_SLEEP
 };
 
 
 /* Globally accessible singletons */
-WiFiClient wifi;
-HttpClient client = HttpClient(wifi, SERVER_ROOT, SERVER_PORT);
-DHT dhtSensor = DHT(DHT_SENSOR_PIN, DHT11);
+GSMClient gsmClient;
+GPRS gprs;
+GSM gsmAccess;
+
+HttpClient client = HttpClient(gsmClient, SERVER_ROOT, SERVER_PORT);
+
 DS18B20 tempSensor = DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
-
+DHT dht(4, DHT11);
 
 void setup()
 {
     Serial.begin(38400);
     tempSensor.begin();
-    dhtSensor.begin();
-    WiFi.lowPowerMode();
+    dht.begin();
+
+    // WiFi.lowPowerMode();
 
     /* Configure peripherals */
     pinMode(STATUS_LED_PIN, OUTPUT);
-    pinMode(MAIN_BUTTON_PIN, INPUT);
+    // pinMode(MAIN_BUTTON_PIN, INPUT);
     client.setTimeout(10 * SECOND);
 
     /* Set the main button as an interrupt, allowing it to stop sleep state */
-    LowPower.attachInterruptWakeup(MAIN_BUTTON_PIN, transmit_data, CHANGE);
+    // LowPower.attachInterruptWakeup(MAIN_BUTTON_PIN, transmit_data, CHANGE);
 
     /* Configure StateMachine instance with states and chains */
     stateMachine.addState(States::TRANSMIT_DATA, transmit_data);
-    stateMachine.addState(States::WIFI_CONNECT, wifi_connect);
+    stateMachine.addState(States::GSM_CONNECT, gsm_connect);
     stateMachine.addState(States::DEEP_SLEEP, deep_sleep);
 
     stateMachine.setChainedState(States::TRANSMIT_DATA, States::DEEP_SLEEP);
@@ -116,8 +119,9 @@ void deep_sleep()
         
     if (sleep_time > 0)
     {
-        WiFi.end();
-        LowPower.deepSleep(sleep_time);
+        // END GSM
+        // LowPower.deepSleep(sleep_time);
+        delay(3000);
         awoke_millis = millis();
     }
     stateMachine.release();    
@@ -127,28 +131,30 @@ void deep_sleep()
 void transmit_data()
 {    
     char serialized_json_output[128];
-    byte is_charging = 0;
+    byte isCharging = 0;
     float voltage = read_battery_voltage();
     int batterylevel = read_batterylevel();
     float waterTemperature = tempSensor.GetTemperature('C');
-    float humidity = dhtSensor.readHumidity();
-    float airTemperature = dhtSensor.readTemperature();
+    float airHumidity = dht.readHumidity();
+    float airTemperature = dht.readTemperature();
+      
+    gsm_connect();
     
-
     if (voltage > BATT_MAX_V)
-        is_charging = 1;
-        
+        isCharging = 1;
+       
   
     // Assemble the body of the POST message:
     StaticJsonDocument<128> json_document;
 
+    json_document["air_humidity"] = airHumidity;
+    json_document["air_temperature"] = airTemperature;
+    json_document["water_temp"] = waterTemperature;
     json_document["water_temp"] = waterTemperature;
     json_document["battery_level"] = batterylevel;
     json_document["pwr_bus_voltage"] = voltage;
     json_document["is_charging"] = isCharging;
-    json_document["air_temp"] = airTemperature;
-    json_document["air_humidity"] = humidity;
-
+    
 
     // Serialize the JSON object to char array
     serializeJson(json_document, serialized_json_output);
@@ -158,6 +164,7 @@ void transmit_data()
     #endif
 
     // send the POST request
+    Serial.print(SERVER_ROOT); Serial.print("/"); Serial.print(SUB_PATH);
     client.post(SUB_PATH, CONTENT_TYPE, serialized_json_output);
         
     #ifdef DEVMODE
@@ -188,32 +195,39 @@ int flash(int times, int ms_delay)
 }
 
 
-void wifi_connect()
+void gsm_connect()
 {
+    bool connected = false;
+    
     #if DEVMODE
-        Serial.print("Connecting to WiFI... ");
+        Serial.print("Connecting to GSM... ");
     #endif
     
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
+      
+    // After starting the modem with GSM.begin()
+    // attach the shield to the GPRS network with the APN, login and password
+        
+    while (!connected) {
+        
+        flash(3, 1000);
+        if ((gsmAccess.begin(SIM_PIN) == GSM_READY) &&
+            (gprs.attachGPRS(GPRS_APN, GPRS_LOGIN, GPRS_PW) == GPRS_READY)) {
+        connected = true;
+        } else {
+        Serial.println("Not connected");
+        delay(1000);
+        }
+    }
         
     #if DEVMODE
-        WiFi.status() == WL_CONNECTED ? Serial.println("success") : Serial.println("failed");
+        connected == true ? Serial.println("success") : Serial.println("failed");
     #endif
-
-    flash(3, 1000);
 }
 
 
 void idle()
 {    
-    if (WiFi.status() == WL_CONNECTED)
-    {     
-        stateMachine.transitionTo(States::TRANSMIT_DATA);
-    }    
-    else
-    {
-        stateMachine.transitionTo(States::WIFI_CONNECT);
-    }
+    stateMachine.transitionTo(States::TRANSMIT_DATA);
 }
 
 

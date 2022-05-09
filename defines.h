@@ -28,9 +28,10 @@
 #define HOUR                 60 * MINUTE
 #define DAY                  24 * HOUR
 
-#define WIFI_SSID            " 
-#define WIFI_PASS            " 
-#define DEVICE_ID            ""
+#define GPRS_APN            "internet.tele2.se"
+#define GPRS_LOGIN          "internet.tele2.se"
+#define GPRS_PW             ""
+#define SIM_PIN             "0000"
 
 // How often Poolguy whould awake and send telemetry
 #define INTERVAL             1 * MINUTE
@@ -38,13 +39,13 @@
 #define BATT_MAX_V           3.945
 #define BATT_MIN_V           3.280
 
-#define DEVMODE              0
+#define DEVMODE              1
 #define CONTENT_TYPE         "application/json"
 
 #if DEVMODE
-    #define SERVER_ROOT      ""
-    #define SUB_PATH         ""
-    #define SERVER_PORT      8000
+    #define SERVER_ROOT      "dweet.io"
+    #define SUB_PATH         "/dweet/for/6d721c71-16a1-4bab-859f-e8bc90b02d63"
+    #define SERVER_PORT      80
 #else
     #define SERVER_ROOT      ""
     #define SUB_PATH         ""
