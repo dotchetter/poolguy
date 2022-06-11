@@ -8,16 +8,14 @@
 
 
 #include "defines.h"
-#include "DS18B20.h"
 
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include <StateMachine.h>
 #include <ArduinoLowPower.h>
 #include <ArduinoHttpClient.h>
 #include <MKRGSM.h>
-#include <DHT.h>
 #include <ArduinoJson.h>
-
-
 
 /* Constants */
 unsigned long awoke_millis = millis();
@@ -40,32 +38,20 @@ enum class States
 
 
 /* Globally accessible singletons */
-GSMClient gsmClient;
-GPRS gprs;
-GSM gsmAccess;
 
-HttpClient client = HttpClient(gsmClient, SERVER_ROOT, SERVER_PORT);
+OneWire oneWire(TEMP_SENSOR_PIN);
+DallasTemperature sensors(&oneWire);
 
-DS18B20 tempSensor = DS18B20(TEMP_PORT_GROUP, PORT_PA16);
 StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
-DHT dht(4, DHT11);
+
 
 void setup()
 {
     Serial.begin(38400);
-    tempSensor.begin();
-    dht.begin();
-
-    // WiFi.lowPowerMode();
-
+ 
     /* Configure peripherals */
     pinMode(STATUS_LED_PIN, OUTPUT);
-    // pinMode(MAIN_BUTTON_PIN, INPUT);
-    client.setTimeout(10 * SECOND);
-
-    /* Set the main button as an interrupt, allowing it to stop sleep state */
-    // LowPower.attachInterruptWakeup(MAIN_BUTTON_PIN, transmit_data, CHANGE);
-
+    
     /* Configure StateMachine instance with states and chains */
     stateMachine.addState(States::TRANSMIT_DATA, transmit_data);
     stateMachine.addState(States::GSM_CONNECT, gsm_connect);
@@ -119,9 +105,8 @@ void deep_sleep()
         
     if (sleep_time > 0)
     {
-        // END GSM
-        // LowPower.deepSleep(sleep_time);
-        delay(3000);
+        LowPower.sleep(sleep_time);
+        //delay(sleep_time);
         awoke_millis = millis();
     }
     stateMachine.release();    
@@ -131,15 +116,24 @@ void deep_sleep()
 void transmit_data()
 {    
     char serialized_json_output[128];
+    
     byte isCharging = 0;
     float voltage = read_battery_voltage();
     int batterylevel = read_batterylevel();
-    float waterTemperature = tempSensor.GetTemperature('C');
-    float airHumidity = dht.readHumidity();
-    float airTemperature = dht.readTemperature();
-      
-    gsm_connect();
+    float waterTemperature;
+    char product_name[] = PRODUCT_NAME;
+    char device_id[] = DEVICE_ID;
     
+    
+    GSMClient gsmClient;
+    GPRS gprs;
+    GSM gsmAccess;
+    HttpClient client = HttpClient(gsmClient, SERVER_ROOT, SERVER_PORT);
+    client.setTimeout(10 * SECOND);
+    
+    sensors.requestTemperatures();
+    waterTemperature = sensors.getTempCByIndex(0);
+
     if (voltage > BATT_MAX_V)
         isCharging = 1;
        
@@ -147,29 +141,38 @@ void transmit_data()
     // Assemble the body of the POST message:
     StaticJsonDocument<128> json_document;
 
-    json_document["air_humidity"] = airHumidity;
-    json_document["air_temperature"] = airTemperature;
-    json_document["water_temp"] = waterTemperature;
+    json_document["product_name"] = "Poolguy";
     json_document["water_temp"] = waterTemperature;
     json_document["battery_level"] = batterylevel;
     json_document["pwr_bus_voltage"] = voltage;
     json_document["is_charging"] = isCharging;
+        
     
-
     // Serialize the JSON object to char array
     serializeJson(json_document, serialized_json_output);
 
-    #ifdef DEVMODE
+    #if DEVMODE
         Serial.println(serialized_json_output);
     #endif
 
+    while (1) {
+        flash(3, 1000);
+        digitalWrite(STATUS_LED_PIN, 1);
+        if ((gsmAccess.begin(SIM_PIN) == GSM_READY) && (gprs.attachGPRS(GPRS_APN, GPRS_LOGIN, GPRS_PW) == GPRS_READY))
+            break;
+        
+        delay(1000);
+    }
+
+
     // send the POST request
-    Serial.print(SERVER_ROOT); Serial.print("/"); Serial.print(SUB_PATH);
     client.post(SUB_PATH, CONTENT_TYPE, serialized_json_output);
         
-    #ifdef DEVMODE
+    #if DEVMODE
         // read the status code and body of the response
         int status_code = client.responseStatusCode();
+        Serial.print("Sent a request to: ");
+        Serial.print(SERVER_ROOT); Serial.print("/"); Serial.print(SUB_PATH);
         Serial.print("Status code: ");
         Serial.println(status_code);
         Serial.print("Response: ");
@@ -197,36 +200,17 @@ int flash(int times, int ms_delay)
 
 void gsm_connect()
 {
-    bool connected = false;
     
     #if DEVMODE
         Serial.print("Connecting to GSM... ");
     #endif
-    
-      
-    // After starting the modem with GSM.begin()
-    // attach the shield to the GPRS network with the APN, login and password
-        
-    while (!connected) {
-        
-        flash(3, 1000);
-        if ((gsmAccess.begin(SIM_PIN) == GSM_READY) &&
-            (gprs.attachGPRS(GPRS_APN, GPRS_LOGIN, GPRS_PW) == GPRS_READY)) {
-        connected = true;
-        } else {
-        Serial.println("Not connected");
-        delay(1000);
-        }
-    }
-        
-    #if DEVMODE
-        connected == true ? Serial.println("success") : Serial.println("failed");
-    #endif
+          
+
 }
 
 
 void idle()
-{    
+{   
     stateMachine.transitionTo(States::TRANSMIT_DATA);
 }
 
