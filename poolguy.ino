@@ -47,7 +47,8 @@ StateMachine<States> stateMachine = StateMachine<States>(States::IDLE, idle);
 
 void setup()
 {
-    Serial.begin(38400);
+    #if DEVMODE
+        Serial.begin(38400);
  
     /* Configure peripherals */
     pinMode(STATUS_LED_PIN, OUTPUT);
