@@ -44,7 +44,7 @@
 
 
 #define SERVER_ROOT      "dweet.io"
-#define SUB_PATH         "/dweet/for/6d721c71-16a1-4bab-859f-e8bc90b02d63"
+#define SUB_PATH         "/dweet/for/"
 #define SERVER_PORT      80
 
 
