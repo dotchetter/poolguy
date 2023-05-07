@@ -34,17 +34,18 @@
 #define SIM_PIN             "0000"
 
 // How often Poolguy should awake and send telemetry
-#define INTERVAL             5 * MINUTE
+#define INTERVAL             15 * MINUTE
 
 #define BATT_MAX_V           3.945
 #define BATT_MIN_V           3.280
 
 #define DEVMODE              0
+#define DEVICE_ID            "6d721c71-16a1-4bab-859f-e8bc90b02d63"
 #define CONTENT_TYPE         "application/json"
 
 
 #define SERVER_ROOT      "dweet.io"
-#define SUB_PATH         "/dweet/for/"
+#define SUB_PATH         "/dweet/for/6d721c71-16a1-4bab-859f-e8bc90b02d63"
 #define SERVER_PORT      80
 
 
