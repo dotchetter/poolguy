@@ -49,7 +49,8 @@ void setup()
 {
     #if DEVMODE
         Serial.begin(38400);
- 
+    #endif
+
     /* Configure peripherals */
     pinMode(STATUS_LED_PIN, OUTPUT);
     
