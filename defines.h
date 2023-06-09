@@ -34,7 +34,7 @@
 #define SIM_PIN             "0000"
 
 // How often Poolguy should awake and send telemetry
-#define INTERVAL             15 * MINUTE
+#define INTERVAL             15 * MINUTE 
 
 #define BATT_MAX_V           3.945
 #define BATT_MIN_V           3.280

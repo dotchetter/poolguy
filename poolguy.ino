@@ -108,7 +108,6 @@ void deep_sleep()
     if (sleep_time > 0)
     {
         LowPower.sleep(sleep_time);
-        //delay(sleep_time);
         awoke_millis = millis();
     }
     stateMachine.release();    
@@ -138,7 +137,10 @@ void transmit_data()
 
     if (voltage > BATT_MAX_V)
         isCharging = 1;
-       
+
+    Serial.print("Temperature: ");
+    Serial.println(waterTemperature);       
+    return;
   
     // Assemble the body of the POST message:
     StaticJsonDocument<128> json_document;
