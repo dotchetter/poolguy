@@ -14,7 +14,7 @@
  * Written on 2020-11-26, Simon Olofsson
  */
 
-#define FW_VERSION           "1.3.0"
+#define FW_VERSION           "1.3.1"
 #define PRODUCT_NAME         "Poolguy"
 
 #define TEMP_PORT_GROUP      0
