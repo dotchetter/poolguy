@@ -19,7 +19,7 @@
 
 #define TEMP_PORT_GROUP      0
 #define TEMP_PINMASK         PORT_PA22
-#define TEMP_SENSOR_PIN      0
+#define TEMP_SENSOR_PIN      4
 #define STATUS_LED_PIN       5
 #define MAIN_BUTTON_PIN      6
 
